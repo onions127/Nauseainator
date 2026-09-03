@@ -11,17 +11,19 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlin.random.Random
 
 class MotionDotsView(context: Context) : View(context), Choreographer.FrameCallback {
 
+    private data class Dot(var x: Float, var y: Float, var radius: Float)
+
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#80000000") // Semi-transparent small black dots
+        color = Color.parseColor("#BF000000") // 75% opacity black
         style = Paint.Style.FILL
     }
     
-    private val dotRadius = 12f
-    private val dotMargin = 40f
     private val numDots = 12
+    private val dots = mutableListOf<Dot>()
 
     private var targetOffsetX = 0f
     private var targetOffsetY = 0f
@@ -40,6 +42,35 @@ class MotionDotsView(context: Context) : View(context), Choreographer.FrameCallb
 
     init {
         setWillNotDraw(false)
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        generateDots(w, h)
+    }
+
+    private fun generateDots(width: Int, height: Int) {
+        dots.clear()
+        if (width == 0 || height == 0) return
+
+        val bucketHeight = height.toFloat() / numDots
+
+        for (i in 0 until numDots) {
+            val bucketStartY = i * bucketHeight
+            val bucketEndY = (i + 1) * bucketHeight
+
+            // Left side dot
+            val leftY = Random.nextFloat() * (bucketEndY - bucketStartY) + bucketStartY
+            val leftX = Random.nextFloat() * 40f + 10f // Random X between 10 and 50
+            val leftRadius = Random.nextFloat() * 6f + 8f // Random radius between 8 and 14
+            dots.add(Dot(leftX, leftY, leftRadius))
+
+            // Right side dot
+            val rightY = Random.nextFloat() * (bucketEndY - bucketStartY) + bucketStartY
+            val rightX = width - (Random.nextFloat() * 40f + 10f) // Random X between width-50 and width-10
+            val rightRadius = Random.nextFloat() * 6f + 8f // Random radius between 8 and 14
+            dots.add(Dot(rightX, rightY, rightRadius))
+        }
     }
 
     override fun onAttachedToWindow() {
@@ -96,34 +127,16 @@ class MotionDotsView(context: Context) : View(context), Choreographer.FrameCallb
         // Move the current position
         currentOffsetX += velocityX
         currentOffsetY += velocityY
-        
-        // Ensure that when the phone stops moving, the dots gently return to baseline (0,0) offset
-        // by making the target slowly decay to 0 if no new data pushes it away.
-        // Actually, since targetOffsetX is driven directly by the low-pass filtered accel (which returns to 0 on resting),
-        // we don't need a manual decay here.
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         
-        val spacing = height / (numDots + 1f)
-        
-        for (i in 1..numDots) {
-            val baseY = i * spacing
-            
-            // Left margin dot
+        for (dot in dots) {
             canvas.drawCircle(
-                dotMargin + currentOffsetX, 
-                baseY + currentOffsetY, 
-                dotRadius, 
-                paint
-            )
-            
-            // Right margin dot
-            canvas.drawCircle(
-                width - dotMargin + currentOffsetX, 
-                baseY + currentOffsetY, 
-                dotRadius, 
+                dot.x + currentOffsetX, 
+                dot.y + currentOffsetY, 
+                dot.radius, 
                 paint
             )
         }
