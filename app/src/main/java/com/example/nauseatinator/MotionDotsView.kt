@@ -17,12 +17,18 @@ class MotionDotsView(context: Context) : View(context), Choreographer.FrameCallb
 
     private data class Dot(var x: Float, var y: Float, var radius: Float)
 
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor("#BF000000") // 75% opacity black
         style = Paint.Style.FILL
     }
+
+    private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#66FFFFFF") // 40% opacity white outline
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
     
-    private val numDots = 12
+    private val numDotsPerColumn = 12
     private val dots = mutableListOf<Dot>()
 
     private var targetOffsetX = 0f
@@ -53,23 +59,37 @@ class MotionDotsView(context: Context) : View(context), Choreographer.FrameCallb
         dots.clear()
         if (width == 0 || height == 0) return
 
-        val bucketHeight = height.toFloat() / numDots
+        val bucketHeight = height.toFloat() / numDotsPerColumn
 
-        for (i in 0 until numDots) {
+        for (i in 0 until numDotsPerColumn) {
             val bucketStartY = i * bucketHeight
             val bucketEndY = (i + 1) * bucketHeight
 
-            // Left side dot
-            val leftY = Random.nextFloat() * (bucketEndY - bucketStartY) + bucketStartY
-            val leftX = Random.nextFloat() * 40f + 10f // Random X between 10 and 50
-            val leftRadius = Random.nextFloat() * 6f + 8f // Random radius between 8 and 14
-            dots.add(Dot(leftX, leftY, leftRadius))
+            // --- LEFT SIDE ---
+            // Outer column
+            var y = Random.nextFloat() * (bucketEndY - bucketStartY) + bucketStartY
+            var x = Random.nextFloat() * 20f + 10f // Between 10 and 30 px from edge
+            var radius = Random.nextFloat() * 6f + 8f
+            dots.add(Dot(x, y, radius))
 
-            // Right side dot
-            val rightY = Random.nextFloat() * (bucketEndY - bucketStartY) + bucketStartY
-            val rightX = width - (Random.nextFloat() * 40f + 10f) // Random X between width-50 and width-10
-            val rightRadius = Random.nextFloat() * 6f + 8f // Random radius between 8 and 14
-            dots.add(Dot(rightX, rightY, rightRadius))
+            // Inner column
+            y = Random.nextFloat() * (bucketEndY - bucketStartY) + bucketStartY
+            x = Random.nextFloat() * 20f + 50f // Between 50 and 70 px from edge
+            radius = Random.nextFloat() * 6f + 8f
+            dots.add(Dot(x, y, radius))
+
+            // --- RIGHT SIDE ---
+            // Outer column
+            y = Random.nextFloat() * (bucketEndY - bucketStartY) + bucketStartY
+            x = width - (Random.nextFloat() * 20f + 10f)
+            radius = Random.nextFloat() * 6f + 8f
+            dots.add(Dot(x, y, radius))
+
+            // Inner column
+            y = Random.nextFloat() * (bucketEndY - bucketStartY) + bucketStartY
+            x = width - (Random.nextFloat() * 20f + 50f)
+            radius = Random.nextFloat() * 6f + 8f
+            dots.add(Dot(x, y, radius))
         }
     }
 
@@ -116,15 +136,12 @@ class MotionDotsView(context: Context) : View(context), Choreographer.FrameCallb
     }
 
     private fun updatePhysics() {
-        // Calculate the force pulling the dot towards its target offset
         val forceX = (targetOffsetX - currentOffsetX) * stiffness
         val forceY = (targetOffsetY - currentOffsetY) * stiffness
 
-        // Apply force to velocity and dampen it
         velocityX = (velocityX + forceX) * damping
         velocityY = (velocityY + forceY) * damping
 
-        // Move the current position
         currentOffsetX += velocityX
         currentOffsetY += velocityY
     }
@@ -133,11 +150,19 @@ class MotionDotsView(context: Context) : View(context), Choreographer.FrameCallb
         super.onDraw(canvas)
         
         for (dot in dots) {
+            // Draw the black fill
             canvas.drawCircle(
                 dot.x + currentOffsetX, 
                 dot.y + currentOffsetY, 
                 dot.radius, 
-                paint
+                fillPaint
+            )
+            // Draw the white outline (halo)
+            canvas.drawCircle(
+                dot.x + currentOffsetX,
+                dot.y + currentOffsetY,
+                dot.radius,
+                strokePaint
             )
         }
     }
